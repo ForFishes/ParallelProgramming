@@ -8,20 +8,30 @@
 #include <iomanip>
 #include<time.h>
 using namespace std;
-const long long n = 1000000000;
-const int thread_count = 16;
+const long long n = 100000000;
+const int thread_count = 8;
 long double volatile sum = 0.0;
 long volatile flag = 0;
 pthread_mutex_t work_mutex;                    //声明互斥量work_mutex
+
+
+//double factor = 1.0;
+//double sum = 0.0;
+//for (int i = 0; i < n;++i,factor=-factor)
+//{
+//	sum += factor / (2 * i + 1);
+//}
+//pi = 4.0*sum;
+
+
+
 
 void *Thread_sum(void* rank)
 {
 	long my_rank = *(long*)rank;
 	double factor;
-	long double i;
-	long double my_n = n / thread_count;
-	long long my_first_i = my_n*my_rank;
-	long long my_last_i = my_first_i + my_n;
+	long double i, my_n = n / thread_count;
+	long long my_first_i = my_n*my_rank, my_last_i = my_first_i + my_n;
 	if (my_first_i % 2==0)
 	{
 		factor = 1.0;
@@ -34,28 +44,17 @@ void *Thread_sum(void* rank)
 	{
 		sum += factor / (2 * i + 1);
 	}
-	cout << setprecision(11) << sum * 4 << endl;
-
 	return NULL;
 }
 
 //忙等待
-void *Thread_sum_busy(void* rank)
-{
+void *Thread_sum_busy(void* rank){
 	long my_rank = *(long*)rank;
 	double factor;
-	long double i;
-	long double my_n = n / thread_count;
+	long double i, my_n = n / thread_count;
 	long long my_first_i = my_n*my_rank;
-	long long my_last_i = my_first_i + my_n;
-	if (my_first_i % 2 == 0)
-	{
-		factor = 1.0;
-	}
-	else
-	{
-		factor = -1.0;
-	}
+	double my_last_i = my_first_i + my_n;
+	my_first_i % 2 == 0 ? factor = 1.0 : factor = -1.0;
 	for (long double i = my_first_i; i < my_last_i; ++i, factor = -factor)
 	{
 		while (flag != my_rank);
@@ -136,7 +135,7 @@ int main(int argc, char const *argv[])
 	//创建线程函数
 	for (int i = 0; i != thread_count; ++i)
 	{
-		pthread_create(&thread[i], NULL, Thread_sum_lock, &num[i]);
+		pthread_create(&thread[i], NULL, Thread_sum_partbusy, &num[i]);
 	}
 	//销毁线程
 	for (int i = 0; i != thread_count; ++i)
